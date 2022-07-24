@@ -28,11 +28,18 @@ var validFormatsMap = map[string]Format{
 }
 
 type Config struct {
-	count   int
-	outFile string
-	format  Format
-	fields  []string
-	mode    Mode
+	// number of random rows to generate
+	Count int
+
+	// output file
+	OutFile string
+
+	// output format
+	Format Format
+
+	Mode Mode
+
+	ProjectedFields map[string]bool
 }
 
 // InferFormat tries to infer the format of the file from its extension.
@@ -98,28 +105,39 @@ func ValidateConfig(count int, outFile, format, mode, fields string) error {
 // You shall call ValidateConfig before calling this function
 func NewConfig(count int, outFile, format, mode, fields string) *Config {
 	config := Config{
-		count,
-		outFile,
-		validFormatsMap[format], // format should be valid at this time
-		nil,
-		OVERWRITE,
+		Count:           count,
+		OutFile:         outFile,
+		Format:          validFormatsMap[format], // format should be valid at this time
+		Mode:            OVERWRITE,
+		ProjectedFields: nil,
 	}
 
 	// extract all fields
 	splittedFields := strings.Split(fields, ",")
-	fieldList := make([]string, 0, len(splittedFields))
+	fieldsMap := make(map[string]bool)
 	for _, field := range splittedFields {
 		field = strings.TrimSpace(field)
-		fieldList = append(fieldList, field)
+		fieldsMap[field] = true
 	}
-	config.fields = fieldList
+	config.ProjectedFields = fieldsMap
 
 	// change mode if needed
 	if mode == "append" { // at this time mode should be valid
-		config.mode = APPEND
+		config.Mode = APPEND
 	}
 
 	return &config
+}
+
+// Fields returns all the fields to be projected
+func (conf *Config) Fields() []string {
+	fields := make([]string, 0, len(conf.ProjectedFields))
+
+	for key := range conf.ProjectedFields {
+		fields = append(fields, key)
+	}
+
+	return fields
 }
 
 func (conf *Config) String() string {
@@ -130,10 +148,10 @@ func (conf *Config) String() string {
 		"fields=%s, "+
 		"mode=%d"+
 		"]",
-		conf.count,
-		conf.outFile,
-		conf.format,
-		strings.Join(conf.fields, ","),
-		conf.mode,
+		conf.Count,
+		conf.OutFile,
+		conf.Format,
+		strings.Join(conf.Fields(), ","),
+		conf.Mode,
 	)
 }
