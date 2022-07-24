@@ -1,6 +1,9 @@
 # IDEs
 /.idea
 
+# compiled binary
+randata
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
