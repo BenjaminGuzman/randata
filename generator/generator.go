@@ -1,4 +1,4 @@
-package main
+package generator
 
 import (
 	"fmt"
@@ -39,6 +39,22 @@ func (g *Generator) asciify(str string) (out string) {
 	return out
 }
 
+var PROJECTED_FIELDS_AVAILABLE = []string{
+	"firstName",
+	"lastName",
+	"username",
+	"password",
+	"address",
+	"streetAddress",
+	"state",
+	"city",
+	"country",
+	"phone",
+	"ssn",
+	"dob",
+	"zipCode",
+}
+
 // returns the field name and field value
 func (g *Generator) genField(field string) (string, string) {
 	switch field {
@@ -51,9 +67,9 @@ func (g *Generator) genField(field string) (string, string) {
 	case "password":
 		return field, g.faker.Internet().Password()
 	case "address":
-		return field, g.faker.Address().Address()
+		return field, strings.Replace(g.faker.Address().Address(), "%", "#", 1) // faker uses % instead of #
 	case "streetAddress":
-		return field, g.faker.Address().StreetAddress()
+		return field, strings.Replace(g.faker.Address().StreetAddress(), "%", "#", 1)
 	case "state":
 		return field, g.faker.Address().State()
 	case "city":
@@ -82,7 +98,9 @@ func (g *Generator) genField(field string) (string, string) {
 	}
 }
 
-func (g *Generator) GenerateRow(projectedFields map[string]bool) (row map[string]string) {
+func (g *Generator) GenerateRow(projectedFields map[string]bool) map[string]string {
+	row := make(map[string]string)
+
 	for field, b := range projectedFields {
 		if !b {
 			continue

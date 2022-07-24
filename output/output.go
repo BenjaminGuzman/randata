@@ -1,49 +1,30 @@
 package output
 
 import (
-	"encoding/csv"
+	"github.com/BenjaminGuzman/randata/config"
 	"log"
 	"os"
 )
 
 type Output interface {
-	writeRow(map[string]string) error
+	WriteRow(map[string]string) error
+	Close() error
 }
 
-type AbstractOutput struct {
-	file   *os.File
-	format main.Format
-}
-
-func openCreateOrFail(file string) *os.File {
-	f, err := os.OpenFile(file, os.O_RDWR, 066)
+func openCreateOrFail(file string, mode config.Mode) *os.File {
+	var f *os.File
+	var err error
+	if mode == config.OVERWRITE {
+		f, err = os.OpenFile(file, os.O_RDWR|os.O_CREATE, 0644)
+		if err == nil {
+			err = os.Truncate(file, 0) // delete file contents (if any)
+		}
+	} else {
+		f, err = os.OpenFile(file, os.O_APPEND|os.O_RDWR, 0644)
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	return f
-}
-
-func NewOutput(config *main.Config) *Output {
-	f, err := os.OpenFile(config.OutFile, os.O_RDWR, 066)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	out := &Output{
-		file:   f,
-		format: config.Format,
-	}
-
-	switch config.Format {
-	case main.JSON: // TODO
-		break
-	case main.CSV:
-		out.csvWriter = csv.NewWriter(out.file)
-	}
-
-}
-
-func (o *Output) writeRow(row map[string]string) {
-
 }

@@ -1,8 +1,9 @@
-package main
+package config
 
 import (
 	"errors"
 	"fmt"
+	"github.com/BenjaminGuzman/randata/generator"
 	"os"
 	"path"
 	"strings"
@@ -112,14 +113,18 @@ func NewConfig(count int, outFile, format, mode, fields string) *Config {
 		ProjectedFields: nil,
 	}
 
-	// extract all fields
-	splittedFields := strings.Split(fields, ",")
-	fieldsMap := make(map[string]bool)
-	for _, field := range splittedFields {
-		field = strings.TrimSpace(field)
-		fieldsMap[field] = true
+	if fields == "ALL" {
+		config.ProjectedFields = make(map[string]bool)
+		config.SetProjectedFields(generator.PROJECTED_FIELDS_AVAILABLE)
+	} else {
+		splittedFields := strings.Split(fields, ",")
+		fieldsMap := make(map[string]bool)
+		for _, field := range splittedFields {
+			field = strings.TrimSpace(field)
+			fieldsMap[field] = true
+		}
+		config.ProjectedFields = fieldsMap
 	}
-	config.ProjectedFields = fieldsMap
 
 	// change mode if needed
 	if mode == "append" { // at this time mode should be valid
@@ -129,12 +134,33 @@ func NewConfig(count int, outFile, format, mode, fields string) *Config {
 	return &config
 }
 
+func (conf *Config) SetProjectedFields(fields []string) {
+	for _, field := range fields {
+		conf.ProjectedFields[field] = true
+	}
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // Fields returns all the fields to be projected
+// if some field has custom format, only its name is returned
 func (conf *Config) Fields() []string {
 	fields := make([]string, 0, len(conf.ProjectedFields))
 
-	for key := range conf.ProjectedFields {
-		fields = append(fields, key)
+	for field := range conf.ProjectedFields {
+		var fieldName string // field can have the format fieldName:fieldFormat, or it can just be fieldName
+		if idx := strings.Index(field, ":"); idx > 0 {
+			fieldName = field[:idx]
+		} else {
+			fieldName = field
+		}
+
+		fields = append(fields, fieldName)
 	}
 
 	return fields
@@ -145,7 +171,7 @@ func (conf *Config) String() string {
 		"count=%d, "+
 		"outFile=%s, "+
 		"format=%d, "+
-		"fields=%s, "+
+		"fields=\"%s\", "+
 		"mode=%d"+
 		"]",
 		conf.Count,

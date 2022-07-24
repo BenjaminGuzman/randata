@@ -1,9 +1,11 @@
 package main
 
 import (
-	"encoding/csv"
 	"flag"
 	"fmt"
+	"github.com/BenjaminGuzman/randata/config"
+	"github.com/BenjaminGuzman/randata/generator"
+	"github.com/BenjaminGuzman/randata/output"
 	"log"
 	"strings"
 )
@@ -14,11 +16,12 @@ func configFlags(count *int, outFile, format, mode, fields *string) {
 		format,
 		"format",
 		"",
-		"Output format. If not given it'll be inferred from the output file extension (as long as it's valid). ",
+		"Output format. If not given it'll be inferred from the output file extension (as long as it's valid).\n"+
+			"Valid formats: csv, json",
 	)
 	flag.StringVar(
 		outFile,
-		"file",
+		"out",
 		"data.csv",
 		"Output file. You can choose to append or overwrite with the --mode flag",
 	)
@@ -32,18 +35,18 @@ func configFlags(count *int, outFile, format, mode, fields *string) {
 		fields,
 		"fields",
 		"ALL",
-		"Comma separated fields to project. These are ignored in append mode. "+
-			"Special value is ALL which is equivalent to selecting all fields. "+
-			"If you need a field that is not one of the pre-defined, you can provide its name followed by its format "+
-			"(separated by a colon, e.g. customField:### ??**) "+
-			"To specify the format you can use the wildcards '?' to specify a random letter, '#' a random number, "+
-			"and '*' a random ASCII char",
+		"Comma separated fields to project. These are ignored in append mode.\n "+
+			"ALL is a special value, and it is equivalent to selecting all fields.\n "+
+			"If you need a field that is not one of the pre-defined, you can provide its name followed by its format\n "+
+			"(separated by a colon, e.g. customField:### ??**)\n "+
+			"To specify the format you can use the wildcards '?' for a random letter, '#' for a random number, "+
+			"and '*' for a random ASCII char",
 	)
 }
 
 // calls configFlags(), parses, validates and creates a new Config object.
 // May return nil if some config is invalid. You don't need to log any error to notify user
-func initConfig() *Config {
+func initConfig() *config.Config {
 	var count int
 	var outFile, format, mode, fields string
 
@@ -58,7 +61,7 @@ func initConfig() *Config {
 
 	// infer format in case it was not given
 	if format == "" {
-		format = InferFormat(outFile)
+		format = config.InferFormat(outFile)
 		if format == "" {
 			log.Printf("couldn't infer format from file %s\n", outFile)
 			return nil
@@ -66,28 +69,44 @@ func initConfig() *Config {
 	}
 
 	// validate args
-	if err := ValidateConfig(count, outFile, format, mode, fields); err != nil {
+	if err := config.ValidateConfig(count, outFile, format, mode, fields); err != nil {
 		log.Println(err)
 		return nil
 	}
 
-	return NewConfig(count, outFile, format, mode, fields)
+	return config.NewConfig(count, outFile, format, mode, fields)
 }
 
 func main() {
-	config := initConfig()
-	if config == nil {
+	conf := initConfig()
+	if conf == nil {
 		return
 	}
 
-	// if append mode is used retrieve the fields from the file
+	fmt.Println("Using configuration:", conf)
 
-	generator := NewGenerator()
-	csv.NewWriter()
-	for i := 0; i < config.Count; i++ {
-		randRecord := generator.GenerateRow(config.ProjectedFields)
+	// prepare output depending on the format
+	var out output.Output
+	switch conf.Format {
+	case config.CSV:
+		csvOut := output.NewCSVOutput(conf)
+		if conf.Mode == config.APPEND {
+			conf.SetProjectedFields(csvOut.Headers)
+		}
+		out = csvOut
+		break
+	case config.JSON:
+		out = output.NewJSONOutput(conf)
+		break
 	}
+	defer out.Close()
 
-	// TODO generate random data using the given configuration
-	fmt.Println(config)
+	// generate and write random data
+	gen := generator.NewGenerator()
+	for i := 0; i < conf.Count; i++ {
+		err := out.WriteRow(gen.GenerateRow(conf.ProjectedFields))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
