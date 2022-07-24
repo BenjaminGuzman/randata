@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"flag"
 	"fmt"
 	"log"
@@ -33,7 +34,10 @@ func configFlags(count *int, outFile, format, mode, fields *string) {
 		"ALL",
 		"Comma separated fields to project. These are ignored in append mode. "+
 			"Special value is ALL which is equivalent to selecting all fields. "+
-			"If you need a field that is not one of the pre-defined, you could provide its name followed by its format",
+			"If you need a field that is not one of the pre-defined, you can provide its name followed by its format "+
+			"(separated by a colon, e.g. customField:### ??**) "+
+			"To specify the format you can use the wildcards '?' to specify a random letter, '#' a random number, "+
+			"and '*' a random ASCII char",
 	)
 }
 
@@ -74,6 +78,14 @@ func main() {
 	config := initConfig()
 	if config == nil {
 		return
+	}
+
+	// if append mode is used retrieve the fields from the file
+
+	generator := NewGenerator()
+	csv.NewWriter()
+	for i := 0; i < config.Count; i++ {
+		randRecord := generator.GenerateRow(config.ProjectedFields)
 	}
 
 	// TODO generate random data using the given configuration
