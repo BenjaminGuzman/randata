@@ -109,4 +109,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+
+	fmt.Printf("Successfully generated %d random records. Saved to %s\n", conf.Count, conf.OutFile)
 }
