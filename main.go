@@ -45,7 +45,7 @@ func configFlags(count *int, outFile, format, mode, fields *string) {
 }
 
 // calls configFlags(), parses, validates and creates a new Config object.
-// May return nil if some config is invalid. You don't need to log any error to notify user
+// if some config is invalid, a fatal error will be logged
 func initConfig() *config.Config {
 	var count int
 	var outFile, format, mode, fields string
@@ -63,15 +63,13 @@ func initConfig() *config.Config {
 	if format == "" {
 		format = config.InferFormat(outFile)
 		if format == "" {
-			log.Printf("couldn't infer format from file %s\n", outFile)
-			return nil
+			log.Fatalf("couldn't infer format from file %s\n", outFile)
 		}
 	}
 
 	// validate args
 	if err := config.ValidateConfig(count, outFile, format, mode, fields); err != nil {
-		log.Println(err)
-		return nil
+		log.Fatalln(err)
 	}
 
 	return config.NewConfig(count, outFile, format, mode, fields)
@@ -79,9 +77,6 @@ func initConfig() *config.Config {
 
 func main() {
 	conf := initConfig()
-	if conf == nil {
-		return
-	}
 
 	fmt.Println("Using configuration:", conf)
 
