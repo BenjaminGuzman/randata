@@ -53,6 +53,7 @@ var PROJECTED_FIELDS_AVAILABLE = []string{
 	"ssn",
 	"dob",
 	"zipCode",
+	"email",
 }
 
 // returns the field name and field value
@@ -89,6 +90,8 @@ func (g *Generator) genField(field string) (string, string) {
 		return field, g.faker.Time().TimeBetween(minDate, maxDate).Format(time.RFC3339)
 	case "zipCode":
 		return field, g.faker.Address().PostCode()
+	case "email":
+		return field, g.faker.Internet().Email()
 	default:
 		fieldName, fieldFormat, err := parseCustomField(field)
 		if err != nil {
